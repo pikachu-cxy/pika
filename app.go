@@ -27,10 +27,11 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	// Perform your setup here
 	a.ctx = ctx
-	_searchreg := <-SearchRegistry.SearchChan
+
 	go func() {
 		for {
-			runtime.EventsEmit(ctx, "SearchRegistry", _searchreg)
+			_searcher := <-SearchRegistry.SearchChan
+			runtime.EventsEmit(ctx, "SearchRegistry", _searcher)
 		}
 	}()
 
@@ -60,6 +61,10 @@ func (a *App) Greet(name string) string {
 
 func (a *App) SearchRegistry(input string) {
 	SearchRegistry.SearchRegistry(input)
+}
+
+func (a *App) DeleteRegistry(input string) {
+	SearchRegistry.DeleteRegistry(input)
 }
 
 func (a *App) Greet2(name string) []string {

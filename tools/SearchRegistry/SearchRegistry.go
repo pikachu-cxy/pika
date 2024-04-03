@@ -8,10 +8,13 @@ import (
 )
 
 type Result struct {
-	Key  string `json:"key"`
-	Path string `json:"path"`
-	//Accuracy string `json:"accuracy"`
+	Id       int    `json:"id"`
+	Key      string `json:"key"`
+	Path     string `json:"path"`
+	Accuracy string `json:"accuracy"`
 }
+
+var level string
 
 var SearchChan chan Result
 
@@ -32,6 +35,58 @@ func SearchRegistry(input string) {
 	initRegistryMap("SOFTWARE", regData)
 
 	searchKeyInMap(keywords, regData)
+
+}
+
+func DeleteRegistry(input string) {
+
+	firstBackslashIndex := strings.Index(input, "\\")
+	if firstBackslashIndex != -1 {
+		firstPart := input[:firstBackslashIndex]
+		fmt.Println("第一个 \\ 前的字符串:", firstPart)
+	} else {
+		fmt.Println("找不到第一个 \\")
+	}
+
+	// 提取最后一个 \ 后的字符串
+	lastBackslashIndex := strings.LastIndex(input, "\\")
+	if lastBackslashIndex != -1 {
+		lastPart := input[lastBackslashIndex+1:]
+		fmt.Println("最后一个 \\ 后的字符串:", lastPart)
+	} else {
+		fmt.Println("找不到最后一个 \\")
+	}
+
+	hive, err := getRootKey(input[:firstBackslashIndex])
+
+	if err != nil {
+		//log.Fatal(err)
+	}
+	for i := lastBackslashIndex - 1; i >= 0; i-- {
+		if input[i] == '\\' {
+			subKey := input[firstBackslashIndex+1:i] + "\\"
+			key, err := registry.OpenKey(hive, subKey, registry.ALL_ACCESS)
+
+			if err != nil {
+				fmt.Println(subKey)
+				fmt.Printf("找到有效zhi：%s\n", input[i:])
+				fmt.Println(err)
+			}
+
+			if err == nil {
+				fmt.Printf("找到有效路径：%s\n", subKey)
+				value := input[i+1:]
+				fmt.Println(value)
+				err = key.DeleteValue(value)
+				if err != nil {
+					fmt.Println(value)
+					fmt.Println(err)
+					//log.Fatal(err)
+				}
+				break
+			}
+		}
+	}
 
 }
 
@@ -149,76 +204,36 @@ func registryKeyToString(key registry.Key) string {
 	}
 }
 
-func searchKeyInMap(keywords []string, regData map[string]string) {
-	//var resultss []string
-	// Create a WaitGroup to track goroutines
+func searchKeyInMap(keywords []string, regData map[string]string) chan Result {
 	var wg sync.WaitGroup
-
-	// Create a channel to collect results
-	//results := make(chan string)
-
-	// Add the number of goroutines to the WaitGroup
 	wg.Add(len(keywords))
-
-	// Iterate over the map's key-value pairs
+	// 创建一个互斥锁用于保护计数器
+	//var mu sync.Mutex
+	//var index int
+	// 启动goroutines来搜索关键词
 	for _, keyword := range keywords {
-		keyword := keyword
+		wg.Add(1) // 增加WaitGroup的计数器
 		go func(k string) {
-			// Decrement the WaitGroup counter when the goroutine completes
-			defer wg.Done()
-			// Process the key-value pair
+			defer wg.Done() // 完成时减少WaitGroup的计数器
 			for key, value := range regData {
-				// Check if the keyword exists in the key or value
-				if keyContains(key, keyword) || keyContains(value, keyword) {
-					// If the keyword is matched, print the key-value pair information
-					SearchChan <- Result{Key: keyword, Path: key}
-					//results <- fmt.Sprintf("Matched keyword %q: Key: %s, Value: %s\n", keyword, key, value)
+				if keyContains(key, k) || keyContains(value, k) {
+					// 使用互斥锁保护计数器的访问，确保每个结果都分配一个唯一的ID
+					//mu.Lock()
+					//index++
+					////id := index
+					//mu.Unlock()
 
+					SearchChan <- Result{Key: k, Path: key, Accuracy: level} // 发送结果到通道
 				}
 			}
 		}(keyword)
 	}
-
-	wg.Wait()
-	close(SearchChan)
-	// Start a goroutine to close the results channel after all the search goroutines have finished
-	//go func() {
-	//	wg.Wait()
-	//	close(results)
-	//}()
-
-	// 在内容末尾加上换行符
-	//username := os.Getenv("USERNAME")
-	////hostname, _ := os.Hostname()
-	////filename := hostname + "-result-" + username + ".txt"
-	//timestamp := time.Now().Format("20060102150405")
-	//filename := "result-" + username + "." + timestamp
-	//file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	//if err != nil {
-	//	_ = fmt.Errorf("error opening file: %v", err)
-	//}
-	//defer func(file *os.File) {
-	//	_ = file.Close()
-	//}(file)
-	//// 创建一个缓冲写入器
-	//writer := bufio.NewWriter(file)
-	//// Read results from the channel
-	//for result := range results {
-	//	//color.Red(result)
-	//	// Write the result to a file
-	//	resultss = append(resultss, result)
-	//	_, err = writer.WriteString(result)
-	//	if err != nil {
-	//		_ = fmt.Errorf("error writing to buffer: %v", err)
-	//	}
-	//}
-	//// 将缓冲区的内容写入文件
-	//err = writer.Flush()
-	//if err != nil {
-	//	_ = fmt.Errorf("error flushing buffer to file: %v", err)
-	//}
-	//resultss = append(resultss, fmt.Sprintf("全部扫描完成,结果请看文件 %s", filename))
-
+	// 启动一个goroutine来关闭通道，当所有搜索完成后
+	go func() {
+		wg.Wait()         // 等待所有搜索goroutine完成
+		close(SearchChan) // 关闭通道
+	}()
+	return SearchChan
 }
 
 //匹配注册表路径的话， //关键字// 说明该文件夹都是软件残留信息
@@ -226,7 +241,14 @@ func searchKeyInMap(keywords []string, regData map[string]string) {
 func keyContains(key string, keyword string) bool {
 	key = strings.ToLower(key)
 	keyword = strings.ToLower(keyword)
-	if strings.Contains(key, "\\"+keyword+"\\") || strings.Contains(key, "\\"+keyword+".") || strings.Contains(key, "."+keyword+".") {
+	if strings.Contains(key, "\\"+keyword+"\\") {
+		level = "high"
+		return true
+	} else if strings.Contains(key, "\\"+keyword+".") {
+		level = "medium"
+		return true
+	} else if strings.Contains(key, "."+keyword+".") {
+		level = "low"
 		return true
 	}
 	// 匹配整个路径or值，开头可以是\或.，结尾可以是\或.
@@ -237,4 +259,21 @@ func keyContains(key string, keyword string) bool {
 	//}
 	//return re.MatchString(key)
 	return false
+}
+
+func getRootKey(rootKeyName string) (registry.Key, error) {
+	switch rootKeyName {
+	case "HKEY_CLASSES_ROOT":
+		return registry.CLASSES_ROOT, nil
+	case "HKEY_CURRENT_USER":
+		return registry.CURRENT_USER, nil
+	case "HKEY_LOCAL_MACHINE":
+		return registry.LOCAL_MACHINE, nil
+	case "HKEY_USERS":
+		return registry.USERS, nil
+	case "HKEY_CURRENT_CONFIG":
+		return registry.CURRENT_CONFIG, nil
+	default:
+		return 0, fmt.Errorf("未知的根键名称: %s", rootKeyName)
+	}
 }
