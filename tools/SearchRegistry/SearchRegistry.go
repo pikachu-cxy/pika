@@ -14,15 +14,17 @@ type Result struct {
 	Accuracy string `json:"accuracy"`
 }
 
+var Percentage chan string
+
 var level string
 
 var SearchChan chan Result
 
-var SearchPercentage chan string
+var lastPercentage float64
 
 func init() {
 	SearchChan = make(chan Result, 1)
-	SearchPercentage = make(chan string, 1)
+	Percentage = make(chan string, 1)
 }
 
 func SearchRegistry(input string) {
@@ -38,58 +40,6 @@ func SearchRegistry(input string) {
 
 }
 
-func DeleteRegistry(input string) {
-
-	firstBackslashIndex := strings.Index(input, "\\")
-	if firstBackslashIndex != -1 {
-		firstPart := input[:firstBackslashIndex]
-		fmt.Println("第一个 \\ 前的字符串:", firstPart)
-	} else {
-		fmt.Println("找不到第一个 \\")
-	}
-
-	// 提取最后一个 \ 后的字符串
-	lastBackslashIndex := strings.LastIndex(input, "\\")
-	if lastBackslashIndex != -1 {
-		lastPart := input[lastBackslashIndex+1:]
-		fmt.Println("最后一个 \\ 后的字符串:", lastPart)
-	} else {
-		fmt.Println("找不到最后一个 \\")
-	}
-
-	hive, err := getRootKey(input[:firstBackslashIndex])
-
-	if err != nil {
-		//log.Fatal(err)
-	}
-	for i := lastBackslashIndex - 1; i >= 0; i-- {
-		if input[i] == '\\' {
-			subKey := input[firstBackslashIndex+1:i] + "\\"
-			key, err := registry.OpenKey(hive, subKey, registry.ALL_ACCESS)
-
-			if err != nil {
-				fmt.Println(subKey)
-				fmt.Printf("找到有效zhi：%s\n", input[i:])
-				fmt.Println(err)
-			}
-
-			if err == nil {
-				fmt.Printf("找到有效路径：%s\n", subKey)
-				value := input[i+1:]
-				fmt.Println(value)
-				err = key.DeleteValue(value)
-				if err != nil {
-					fmt.Println(value)
-					fmt.Println(err)
-					//log.Fatal(err)
-				}
-				break
-			}
-		}
-	}
-
-}
-
 func initRegistryMap(path string, regData map[string]string) {
 	hives := []registry.Key{
 		//SearchRegistry.CLASSES_ROOT,
@@ -100,6 +50,8 @@ func initRegistryMap(path string, regData map[string]string) {
 	}
 	// 创建一个 channel 用于从 goroutine 中接收结果
 	resultCh := make(chan map[string]string)
+
+	//ch := make(chan struct{}, 30)
 
 	// 创建一个 goroutine 处理每个注册表键
 	for _, hive := range hives {
@@ -118,7 +70,6 @@ func initRegistryMap(path string, regData map[string]string) {
 			resultCh <- result
 		}(hive)
 	}
-
 	// 收集所有 goroutine 的结果
 	for range hives {
 		result := <-resultCh
@@ -129,19 +80,9 @@ func initRegistryMap(path string, regData map[string]string) {
 	}
 	// 关闭 channel
 	close(resultCh)
-	//
-	//for _, hive := range hives {
-	//
-	//	key, err := SearchRegistry.OpenKey(hive, path, SearchRegistry.ENUMERATE_SUB_KEYS|SearchRegistry.QUERY_VALUE)
-	//
-	//	if err != nil {
-	//		fmt.Println("Error opening key:", err)
-	//		continue
-	//	}
-	//	defer key.Close()
-	//	searchRegistryToMap(hive, key, path, regData)
-	//}
-
+	//如果注册表软件项不到500000，则赋值100
+	//Percentage <- fmt.Sprintf("%.1f", 1.0*100)
+	close(Percentage)
 }
 
 func searchRegistryToMap(hive registry.Key, key registry.Key, keyPath string, regData map[string]string) {
@@ -159,6 +100,15 @@ func searchRegistryToMap(hive registry.Key, key registry.Key, keyPath string, re
 		}
 		regData[registryKeyToString(hive)+keyPath+"\\"+valueName] = val
 	}
+
+	//currentPercentage := float64(len(regData)) / float64(500000)
+	//
+	//if lastPercentage > currentPercentage {
+	//	currentPercentage = lastPercentage
+	//}
+	//
+	//Percentage <- fmt.Sprintf("%.1f", currentPercentage*100)
+	//lastPercentage = currentPercentage
 
 	//如果子健数量为0，说明是最后一键 直接返回
 	keyinfo, _ := key.Stat()
@@ -276,4 +226,56 @@ func getRootKey(rootKeyName string) (registry.Key, error) {
 	default:
 		return 0, fmt.Errorf("未知的根键名称: %s", rootKeyName)
 	}
+}
+
+func DeleteRegistry(input string) {
+
+	firstBackslashIndex := strings.Index(input, "\\")
+	if firstBackslashIndex != -1 {
+		firstPart := input[:firstBackslashIndex]
+		fmt.Println("第一个 \\ 前的字符串:", firstPart)
+	} else {
+		fmt.Println("找不到第一个 \\")
+	}
+
+	// 提取最后一个 \ 后的字符串
+	lastBackslashIndex := strings.LastIndex(input, "\\")
+	if lastBackslashIndex != -1 {
+		lastPart := input[lastBackslashIndex+1:]
+		fmt.Println("最后一个 \\ 后的字符串:", lastPart)
+	} else {
+		fmt.Println("找不到最后一个 \\")
+	}
+
+	hive, err := getRootKey(input[:firstBackslashIndex])
+
+	if err != nil {
+		//log.Fatal(err)
+	}
+	for i := lastBackslashIndex - 1; i >= 0; i-- {
+		if input[i] == '\\' {
+			subKey := input[firstBackslashIndex+1:i] + "\\"
+			key, err := registry.OpenKey(hive, subKey, registry.ALL_ACCESS)
+
+			if err != nil {
+				fmt.Println(subKey)
+				fmt.Printf("找到有效zhi：%s\n", input[i:])
+				fmt.Println(err)
+			}
+
+			if err == nil {
+				fmt.Printf("找到有效路径：%s\n", subKey)
+				value := input[i+1:]
+				fmt.Println(value)
+				err = key.DeleteValue(value)
+				if err != nil {
+					fmt.Println(value)
+					fmt.Println(err)
+					//log.Fatal(err)
+				}
+				break
+			}
+		}
+	}
+
 }

@@ -6,7 +6,7 @@ import {NTag} from "naive-ui";
 
 
 const data = ref([]);
-
+const percentage = ref(0)
 // const data = ref([
 //   {id:0,tags:["medium"],key:"moba",path:"/13/123"},
 //   {id:1,tags:["medium"],key:"moba",path:"/13/123"},
@@ -156,9 +156,10 @@ const onClickoutside = () =>{
 const  showDropdown = showDropdownRef;
 
 const initRegistryMap = async() =>{
-  //每次点击搜索都重置 数组
+  //每次点击搜索都重置
   data.value = []
   index.value = 1
+  percentage.value = 0
 
   //message.info("正在扫描注册表，请稍候~");
   if (input.value.length === 0) {
@@ -167,7 +168,7 @@ const initRegistryMap = async() =>{
   }
   await SearchRegistry(input.value)
 
-  console.log(data.value)
+  //console.log(data.value)
 }
 
 const index = ref(1)
@@ -186,6 +187,13 @@ EventsOn("SearchRegistry", e => {
   }
 });
 
+EventsOn("percentage", e=>{
+  //percentage.value = percentage
+  if(percentage.value < 100){
+    percentage.value = e
+  }
+})
+
 </script>
 
 <template>
@@ -199,6 +207,11 @@ EventsOn("SearchRegistry", e => {
   <n-button type="primary" class="button" @click="initRegistryMap">
     点击搜索
   </n-button>
+  <n-progress
+      type="line"
+      :percentage=percentage
+      :indicator-placement="'inside'"
+  />
   <n-data-table
       :checked-row-keys = "selectedRowsRef"
       @update:checked-row-keys="handleCheckKeys"

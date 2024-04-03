@@ -30,8 +30,12 @@ func (a *App) startup(ctx context.Context) {
 
 	go func() {
 		for {
-			_searcher := <-SearchRegistry.SearchChan
-			runtime.EventsEmit(ctx, "SearchRegistry", _searcher)
+			select {
+			case percentage := <-SearchRegistry.Percentage:
+				runtime.EventsEmit(ctx, "percentage", percentage)
+			case _searcher := <-SearchRegistry.SearchChan:
+				runtime.EventsEmit(ctx, "SearchRegistry", _searcher)
+			}
 		}
 	}()
 
