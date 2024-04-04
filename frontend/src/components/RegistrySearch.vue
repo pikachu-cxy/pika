@@ -1,10 +1,10 @@
 <script setup>
 import {DeleteRegistry, SearchRegistry} from "../../wailsjs/go/main/App";
 import {EventsOn} from "../../wailsjs/runtime";
-import {computed, h, nextTick, onMounted, ref} from 'vue';
+import {computed, h, nextTick, onMounted, reactive, ref} from 'vue';
 import {NTag} from "naive-ui";
 
-
+const softwareName = ref('')
 const data = ref([]);
 const percentage = ref(0)
 // const data = ref([
@@ -227,6 +227,26 @@ const readFile = (file) => {
   });
 };
 
+const paginationReactive = reactive({
+  page: 2,
+  pageSize: 5,
+  showSizePicker: true,
+  pageSizes: [10, 50, 100],
+  onChange: (page) => {
+    paginationReactive.page = page;
+  },
+  onUpdatePageSize: (pageSize) => {
+    paginationReactive.pageSize = pageSize;
+    paginationReactive.page = 1;
+  }
+});
+
+const filteredItems = computed(() => {
+  return data.value.filter(item =>
+      item.key.toLowerCase().includes(softwareName.value.toLowerCase())
+  );
+});
+
 </script>
 
 <template>
@@ -254,7 +274,9 @@ const readFile = (file) => {
         :indicator-placement="'inside'"
 
     />
+    <n-input v-model:value="softwareName" placeholder="输入搜索的软件名称"></n-input>
     <n-data-table
+        :pagination="paginationReactive"
         :checked-row-keys = "selectedRowsRef"
         @update:checked-row-keys="handleCheckKeys"
         :row-key="rowKey"
@@ -263,7 +285,7 @@ const readFile = (file) => {
         :bordered="false"
         :single-line="false"
         :columns="columns"
-        :data="data"
+        :data="filteredItems"
         :max-height="300"
         style="margin-top: 10px"
     >

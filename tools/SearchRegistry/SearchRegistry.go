@@ -174,7 +174,7 @@ func registryKeyToString(key registry.Key) string {
 	}
 }
 
-func searchKeyInMap(keywords []string, regData map[string]string) chan Result {
+func searchKeyInMap(keywords []string, regData map[string]string) {
 	var wg sync.WaitGroup
 	wg.Add(len(keywords))
 	// 创建一个互斥锁用于保护计数器
@@ -203,7 +203,7 @@ func searchKeyInMap(keywords []string, regData map[string]string) chan Result {
 		wg.Wait()         // 等待所有搜索goroutine完成
 		close(SearchChan) // 关闭通道
 	}()
-	return SearchChan
+
 }
 
 //匹配注册表路径的话， //关键字// 说明该文件夹都是软件残留信息
