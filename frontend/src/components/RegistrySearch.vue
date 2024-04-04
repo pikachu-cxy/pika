@@ -168,7 +168,7 @@ const initRegistryMap = async() =>{
   }
   await SearchRegistry(input.value)
 
-  //console.log(data.value)
+  console.log(data.value)
 }
 
 const index = ref(1)
@@ -217,12 +217,13 @@ const readFile = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      resolve(reader.result);
+      const content = reader.result.replace(/\r\n/g, '\n');
+      resolve(content);
     };
     reader.onerror = () => {
       reject(reader.error);
     };
-    reader.readAsText(file);
+    reader.readAsText(file,'UTF-8');
   });
 };
 

@@ -18,7 +18,7 @@ import Todo from "./components/todo.vue";
         <CveSearch/>
       </n-tab-pane>
       <n-tab-pane name="todo" display-directive="show:lazy" tab="todo">
-        <todo/>
+<!--        <todo/>-->123
       </n-tab-pane>
     </n-tabs>
   </n-card>

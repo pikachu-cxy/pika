@@ -33,9 +33,9 @@ func SearchRegistry(input string) {
 	//这里是windows的读取方式，如果是mac \n
 	//keywords := strings.Split(input, "\r\n")
 	keywords := strings.Split(input, "\n")
-	//for index, value := range keywords {
-	//	fmt.Printf("Index: %d, Value: %s\n", index, value)
-	//}
+	for index, value := range keywords {
+		fmt.Printf("Index: %d, Value: %s\n", index, value)
+	}
 	regData := make(map[string]string)
 	// 初始进度为0%
 	Percentage <- "0"
