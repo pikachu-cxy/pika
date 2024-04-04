@@ -9,7 +9,7 @@ import Todo from "./components/todo.vue";
   <n-card title="Pikachu">
     <n-tabs type="bar" animated class="tabs">
       <n-tab-pane name="注册表扫描" tab="注册表扫描" display-directive="show:lazy" class="tabs">
-        <RegistrySearch/>
+<!--        <RegistrySearch/>-->123
       </n-tab-pane>
       <n-tab-pane name="安全自检" display-directive="show:lazy" tab="安全自检">
         <securityMine/>

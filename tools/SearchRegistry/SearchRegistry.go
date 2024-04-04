@@ -31,13 +31,17 @@ func SearchRegistry(input string) {
 	//start := time.Now()
 	//color.Green("注册表残留软件信息检测开始,请稍等片刻--------------------------")
 	//这里是windows的读取方式，如果是mac \n
-	keywords := strings.Split(input, "\r\n")
+	//keywords := strings.Split(input, "\r\n")
+	keywords := strings.Split(input, "\n")
+	//for index, value := range keywords {
+	//	fmt.Printf("Index: %d, Value: %s\n", index, value)
+	//}
 	regData := make(map[string]string)
 	//读取software注册表进行初始化map
 	initRegistryMap("SOFTWARE", regData)
 
 	searchKeyInMap(keywords, regData)
-
+	//close(Percentage)  //搜索完成后关闭进度条通道
 }
 
 func initRegistryMap(path string, regData map[string]string) {
@@ -48,19 +52,30 @@ func initRegistryMap(path string, regData map[string]string) {
 		//SearchRegistry.USERS,
 		//SearchRegistry.CURRENT_CONFIG,
 	}
+	// 设置并发限制为2个goroutine
+	concurrencyLimit := 2
+	sem := make(chan struct{}, concurrencyLimit)
+
 	// 创建一个 channel 用于从 goroutine 中接收结果
 	resultCh := make(chan map[string]string)
 
 	//ch := make(chan struct{}, 30)
 
 	// 创建一个 goroutine 处理每个注册表键
+	var wg sync.WaitGroup
+
 	for _, hive := range hives {
+		wg.Add(1)
 		go func(h registry.Key) {
+			defer wg.Done()
+			// 等待信号量
+			sem <- struct{}{}
 			key, err := registry.OpenKey(h, path, registry.ENUMERATE_SUB_KEYS|registry.QUERY_VALUE)
 			if err != nil {
 				fmt.Println("Error opening key:", err)
 				// 将空 map 发送到结果 channel 中以表示错误
 				resultCh <- make(map[string]string)
+				<-sem
 				return
 			}
 			defer key.Close()
@@ -68,21 +83,31 @@ func initRegistryMap(path string, regData map[string]string) {
 			searchRegistryToMap(h, key, path, result)
 			// 发送结果到 channel
 			resultCh <- result
+			<-sem
+
 		}(hive)
 	}
-	// 收集所有 goroutine 的结果
+
+	// 启动一个goroutine来收集所有goroutine的结果
+	go func() {
+		wg.Wait()
+		close(resultCh)
+		Percentage <- "100"
+	}()
+	totalKeys := 0
+	// 处理结果
 	for range hives {
 		result := <-resultCh
 		// 合并结果到主 map
 		for k, v := range result {
 			regData[k] = v
+			totalKeys++
 		}
+		// 更新进度条
+		currentPercentage := float64(totalKeys) / float64(500000) * 100
+		Percentage <- fmt.Sprintf("%.1f", currentPercentage)
 	}
-	// 关闭 channel
-	close(resultCh)
-	//如果注册表软件项不到500000，则赋值100
-	//Percentage <- fmt.Sprintf("%.1f", 1.0*100)
-	close(Percentage)
+
 }
 
 func searchRegistryToMap(hive registry.Key, key registry.Key, keyPath string, regData map[string]string) {
@@ -100,15 +125,6 @@ func searchRegistryToMap(hive registry.Key, key registry.Key, keyPath string, re
 		}
 		regData[registryKeyToString(hive)+keyPath+"\\"+valueName] = val
 	}
-
-	//currentPercentage := float64(len(regData)) / float64(500000)
-	//
-	//if lastPercentage > currentPercentage {
-	//	currentPercentage = lastPercentage
-	//}
-	//
-	//Percentage <- fmt.Sprintf("%.1f", currentPercentage*100)
-	//lastPercentage = currentPercentage
 
 	//如果子健数量为0，说明是最后一键 直接返回
 	keyinfo, _ := key.Stat()
