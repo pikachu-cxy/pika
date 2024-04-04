@@ -37,6 +37,9 @@ func SearchRegistry(input string) {
 	//	fmt.Printf("Index: %d, Value: %s\n", index, value)
 	//}
 	regData := make(map[string]string)
+	// 初始进度为0%
+	Percentage <- "0"
+	lastPercentage = 0.0
 	//读取software注册表进行初始化map
 	initRegistryMap("SOFTWARE", regData)
 
@@ -58,8 +61,6 @@ func initRegistryMap(path string, regData map[string]string) {
 
 	// 创建一个 channel 用于从 goroutine 中接收结果
 	resultCh := make(chan map[string]string)
-
-	//ch := make(chan struct{}, 30)
 
 	// 创建一个 goroutine 处理每个注册表键
 	var wg sync.WaitGroup
@@ -94,18 +95,13 @@ func initRegistryMap(path string, regData map[string]string) {
 		close(resultCh)
 		Percentage <- "100"
 	}()
-	totalKeys := 0
 	// 处理结果
 	for range hives {
 		result := <-resultCh
 		// 合并结果到主 map
 		for k, v := range result {
 			regData[k] = v
-			totalKeys++
 		}
-		// 更新进度条
-		currentPercentage := float64(totalKeys) / float64(500000) * 100
-		Percentage <- fmt.Sprintf("%.1f", currentPercentage)
 	}
 
 }
@@ -129,6 +125,14 @@ func searchRegistryToMap(hive registry.Key, key registry.Key, keyPath string, re
 	//如果子健数量为0，说明是最后一键 直接返回
 	keyinfo, _ := key.Stat()
 	if keyinfo.SubKeyCount == 0 {
+
+		// 更新进度条
+		currentPercentage := float64(len(regData)) / float64(500000) * 100
+		if lastPercentage > currentPercentage {
+			currentPercentage = lastPercentage
+		}
+		Percentage <- fmt.Sprintf("%.1f", currentPercentage)
+		lastPercentage = currentPercentage
 		return
 	}
 

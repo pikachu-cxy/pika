@@ -188,9 +188,8 @@ EventsOn("SearchRegistry", e => {
 });
 
 EventsOn("percentage", e=>{
-  //percentage.value = percentage
   if(percentage.value < 100){
-    percentage.value = e
+    percentage.value = parseInt(e)
   }
 })
 
