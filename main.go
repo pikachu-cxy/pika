@@ -14,7 +14,7 @@ import (
 //go:embed frontend/dist
 var assets embed.FS
 
-//go:embed build/appicon.png
+// //go:embed build/appicon.png
 var icon []byte
 
 func main() {
@@ -23,14 +23,14 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:             "pika",
+		Title:             "pika -by 信息安全部门",
 		Width:             1024,
 		Height:            768,
 		MinWidth:          1024,
 		MinHeight:         768,
 		MaxWidth:          1280,
 		MaxHeight:         800,
-		DisableResize:     false,
+		DisableResize:     true,
 		Fullscreen:        false,
 		Frameless:         false,
 		StartHidden:       false,
@@ -50,7 +50,8 @@ func main() {
 		},
 		// Windows platform specific options
 		Windows: &windows.Options{
-			WebviewIsTransparent: false,
+			WebviewIsTransparent: true,
+			BackdropType:         0,
 			WindowIsTranslucent:  false,
 			DisableWindowIcon:    false,
 			// DisableFramelessWindowDecorations: false,

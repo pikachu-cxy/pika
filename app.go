@@ -35,6 +35,8 @@ func (a *App) startup(ctx context.Context) {
 				runtime.EventsEmit(ctx, "percentage", percentage)
 			case _searcher := <-SearchRegistry.SearchChan:
 				runtime.EventsEmit(ctx, "SearchRegistry", _searcher)
+			case _error := <-SearchRegistry.Error:
+				runtime.EventsEmit(ctx, "DeleteError", _error)
 			}
 		}
 	}()

@@ -11,5 +11,6 @@
 			"ProductName": "{{.Info.ProductName}}",
 			"Comments": "{{.Info.Comments}}"
 		}
-	}
+	},
+	"IconPath" : "icon.ico"
 }

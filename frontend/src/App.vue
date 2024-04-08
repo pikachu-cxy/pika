@@ -6,6 +6,8 @@ import Todo from "./components/todo.vue";
 </script>
 
 <template>
+  <n-dialog-provider>
+    <n-message-provider>
   <n-card title="Pikachu">
     <n-tabs type="bar" animated class="tabs">
       <n-tab-pane name="注册表扫描" tab="注册表扫描" display-directive="show:lazy" class="tabs">
@@ -22,6 +24,8 @@ import Todo from "./components/todo.vue";
       </n-tab-pane>
     </n-tabs>
   </n-card>
+    </n-message-provider>
+  </n-dialog-provider>
 </template>
 
 <style scoped>

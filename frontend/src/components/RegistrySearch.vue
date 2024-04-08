@@ -2,7 +2,7 @@
 import {DeleteRegistry, SearchRegistry} from "../../wailsjs/go/main/App";
 import {EventsOn} from "../../wailsjs/runtime";
 import {computed, h, nextTick, onMounted, reactive, ref} from 'vue';
-import {NTag} from "naive-ui";
+import {NTag, useDialog, useMessage} from "naive-ui";
 
 const softwareName = ref('')
 const data = ref([]);
@@ -110,7 +110,7 @@ const options = [
   //   key: "edit"
   // },
   {
-    label: () => h("span", { style: { color: "red" } }, "选择的"+ selectedRowsRef.value.length +"行删除"),
+    label: () => h("span", { style: { color: "red" } }, "选择的"+ selectedRowsRef.value.length +"个注册表项删除"),
     key: "delete"
   }
 ];
@@ -124,29 +124,51 @@ const y=  yRef;
 // 在选中行的索引上设置一个ref
 //const selectedRowIndex = ref(-1);
 
+const dialog = useDialog()
+let sure = false
+const handleConfirm = () => {
+  dialog.warning({
+    title: "警告",
+    content: "确定删除？",
+    positiveText: "确定",
+    negativeText: "不确定",
+    onPositiveClick: () => {
+      sure = true
+    },
+    onNegativeClick: () => {
+      sure = false
+    }
+  });
+}
+
 const handleSelect = (key)=> {
   showDropdownRef.value = false;
   if (key === 'delete') {
     //调用后端go 删除该注册表项
+      // 从数据中移除选中的行
+    dialog.warning({
+      title: "警告",
+      content: "确定删除？",
+      positiveText: "确定",
+      negativeText: "不确定",
+      onPositiveClick: () => {
+        data.value.forEach(
+            row => {
+              if (selectedRowsRef.value.includes(row.id)) {
+                // 从数据中移除选中的行
+                const index = data.value.findIndex(item => item.id === row.id);
+                if (index !== -1) {
+                  DeleteRegistry(row.path);
+                  data.value.splice(index, 1);
+                }
+              }
+              });
+        selectedRowsRef.value = []
+      },
+      onNegativeClick: () => {
 
-    // 从数据中移除选中的行
-    data.value.forEach(
-        row =>{
-          if (selectedRowsRef.value.includes(row.id)) {
-            // 从数据中移除选中的行
-            const index = data.value.findIndex(item => item.id === row.id);
-            if (index !== -1) {
-              DeleteRegistry(row.path);
-              data.value.splice(index, 1);
-            }
-            // 调用后端 Go 函数来删除注册表项
-            //应该在前端删除表项前，后端删除，如返回错误 则回复删除失败
-            //DeleteRegistry(row.path);
-          }
-        });
-    //data.value = data.value.filter(row => !selectedRowsRef.value.includes(row.id));
-    //DeleteRegistry(row.path)
-    selectedRowsRef.value = []
+      }
+    });
   }
 }
 
@@ -155,7 +177,10 @@ const onClickoutside = () =>{
 }
 const  showDropdown = showDropdownRef;
 
+const message = useMessage()
+
 const initRegistryMap = async() =>{
+  message.info("注册表初始化扫描中请稍后~")
   //每次点击搜索都重置
   data.value = []
   index.value = 1
@@ -193,6 +218,15 @@ EventsOn("percentage", e=>{
   }
 })
 
+EventsOn("DeleteError", e=>{
+  dialog.error({
+    title: "删除失败，请手动去注册表删除该项",
+    content: e,
+    positiveText: "确定",
+    onPositiveClick: () => {
+    }
+  })
+})
 
 
 const handleChange = (event) => {
@@ -228,8 +262,8 @@ const readFile = (file) => {
 };
 
 const paginationReactive = reactive({
-  page: 2,
-  pageSize: 5,
+  page: 1,
+  pageSize: 10,
   showSizePicker: true,
   pageSizes: [10, 50, 100],
   onChange: (page) => {
@@ -243,7 +277,7 @@ const paginationReactive = reactive({
 
 const filteredItems = computed(() => {
   return data.value.filter(item =>
-      item.key.toLowerCase().includes(softwareName.value.toLowerCase())
+      item.path.toLowerCase().includes(softwareName.value.toLowerCase())
   );
 });
 
@@ -252,7 +286,11 @@ const filteredItems = computed(() => {
 <template>
   <div class="box">
     <n-input v-model:value="input" type="textarea"
-             placeholder="输入关键字"
+             placeholder="输入软件名称或导入黑名单
+格式:
+huorong
+bilibili
+wechat"
              :autosize="{
                       minRows: 5,
                       maxRows: 20
@@ -274,7 +312,7 @@ const filteredItems = computed(() => {
         :indicator-placement="'inside'"
 
     />
-    <n-input v-model:value="softwareName" placeholder="输入搜索的软件名称"></n-input>
+    <n-input v-model:value="softwareName" placeholder="注册表路径过滤搜索"></n-input>
     <n-data-table
         :pagination="paginationReactive"
         :checked-row-keys = "selectedRowsRef"

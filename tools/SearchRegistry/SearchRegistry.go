@@ -14,6 +14,7 @@ type Result struct {
 	Accuracy string `json:"accuracy"`
 }
 
+var Error chan string
 var Percentage chan string
 
 var level string
@@ -25,6 +26,7 @@ var lastPercentage float64
 func init() {
 	SearchChan = make(chan Result, 1)
 	Percentage = make(chan string, 1)
+	Error = make(chan string, 1)
 }
 
 func SearchRegistry(input string) {
@@ -119,7 +121,7 @@ func searchRegistryToMap(hive registry.Key, key registry.Key, keyPath string, re
 			//fmt.Println("Error reading value:", err)
 			continue
 		}
-		regData[registryKeyToString(hive)+keyPath+"\\"+valueName] = val
+		regData[registryKeyToString(hive)+keyPath+"::"+valueName] = val
 	}
 
 	//如果子健数量为0，说明是最后一键 直接返回
@@ -258,44 +260,35 @@ func DeleteRegistry(input string) {
 		fmt.Println("找不到第一个 \\")
 	}
 
-	// 提取最后一个 \ 后的字符串
-	lastBackslashIndex := strings.LastIndex(input, "\\")
-	if lastBackslashIndex != -1 {
-		lastPart := input[lastBackslashIndex+1:]
-		fmt.Println("最后一个 \\ 后的字符串:", lastPart)
-	} else {
-		fmt.Println("找不到最后一个 \\")
-	}
-
 	hive, err := getRootKey(input[:firstBackslashIndex])
 
 	if err != nil {
 		//log.Fatal(err)
 	}
-	for i := lastBackslashIndex - 1; i >= 0; i-- {
-		if input[i] == '\\' {
-			subKey := input[firstBackslashIndex+1:i] + "\\"
-			key, err := registry.OpenKey(hive, subKey, registry.ALL_ACCESS)
+	parts := strings.Split(input[firstBackslashIndex+1:], "::")
 
-			if err != nil {
-				fmt.Println(subKey)
-				fmt.Printf("找到有效zhi：%s\n", input[i:])
-				fmt.Println(err)
-			}
-
-			if err == nil {
-				fmt.Printf("找到有效路径：%s\n", subKey)
-				value := input[i+1:]
-				fmt.Println(value)
-				err = key.DeleteValue(value)
-				if err != nil {
-					fmt.Println(value)
-					fmt.Println(err)
-					//log.Fatal(err)
-				}
-				break
-			}
-		}
+	// 获取路径部分
+	regPath := parts[0]
+	fmt.Println(regPath)
+	// 打开注册表键
+	key, err := registry.OpenKey(hive, regPath, registry.WRITE)
+	if err != nil {
+		Error <- fmt.Sprintf("Error opening registry key: %s"+"\n"+
+			"path: %s", err, regPath)
+		fmt.Println("Error opening registry key:", err)
+		return
 	}
+	defer key.Close()
+
+	// 删除默认值
+	err = key.DeleteValue(parts[1]) // 空字符串表示默认值
+	if err != nil {
+		Error <- fmt.Sprintf("Error deleting registry value: %s"+"\n"+
+			"path:%s", err, regPath)
+		fmt.Println("Error deleting registry value:", err)
+		return
+	}
+
+	fmt.Println("Default value deleted successfully.")
 
 }
