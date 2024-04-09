@@ -272,9 +272,10 @@ func DeleteRegistry(input string) {
 	fmt.Println(regPath)
 	// 打开注册表键
 	key, err := registry.OpenKey(hive, regPath, registry.WRITE)
+	paths := strings.Split(input, "::")
 	if err != nil {
 		Error <- fmt.Sprintf("Error opening registry key: %s"+"\n"+
-			"path: %s", err, regPath)
+			"path: %s", err, paths[0])
 		fmt.Println("Error opening registry key:", err)
 		return
 	}
@@ -284,7 +285,7 @@ func DeleteRegistry(input string) {
 	err = key.DeleteValue(parts[1]) // 空字符串表示默认值
 	if err != nil {
 		Error <- fmt.Sprintf("Error deleting registry value: %s"+"\n"+
-			"path:%s", err, regPath)
+			"path:%s", err, paths[0])
 		fmt.Println("Error deleting registry value:", err)
 		return
 	}

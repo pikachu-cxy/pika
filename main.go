@@ -53,9 +53,8 @@ func main() {
 			WebviewIsTransparent: true,
 			BackdropType:         0,
 			WindowIsTranslucent:  false,
-			DisableWindowIcon:    false,
 			// DisableFramelessWindowDecorations: false,
-			WebviewUserDataPath: "",
+			//WebviewUserDataPath: "",
 		},
 		// Mac platform specific options
 		Mac: &mac.Options{
