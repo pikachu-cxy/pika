@@ -5,7 +5,8 @@ import {computed, h, nextTick, onMounted, ref} from 'vue';
 import {NTag} from "naive-ui";
 
 
-const data = ref([]);
+//const data = ref([]);
+
 const percentage = ref(0)
 // const data = ref([
 //   {id:0,tags:["medium"],key:"moba",path:"/13/123"},

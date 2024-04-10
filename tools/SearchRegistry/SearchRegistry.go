@@ -14,7 +14,7 @@ type Result struct {
 	Accuracy string `json:"accuracy"`
 }
 
-var Error chan string
+// var Error chan string
 var Percentage chan string
 
 var level string
@@ -26,7 +26,7 @@ var lastPercentage float64
 func init() {
 	SearchChan = make(chan Result, 1)
 	Percentage = make(chan string, 1)
-	Error = make(chan string, 1)
+	//Error = make(chan string)
 }
 
 func SearchRegistry(input string) {
@@ -216,10 +216,31 @@ func keyContains(key string, keyword string) bool {
 	if strings.Contains(key, "\\"+keyword+"\\") {
 		level = "high"
 		return true
+	} else if strings.Contains(key, "\\"+keyword+"-") {
+		level = "medium"
+		return true
+	} else if strings.Contains(key, "\\"+keyword) {
+		level = "medium"
+		return true
+	} else if strings.Contains(key, "-"+keyword+"-") {
+		level = "medium"
+		return true
 	} else if strings.Contains(key, "\\"+keyword+".") {
 		level = "medium"
 		return true
+	} else if strings.Contains(key, "."+keyword) {
+		level = "low"
+		return true
 	} else if strings.Contains(key, "."+keyword+".") {
+		level = "low"
+		return true
+	} else if strings.Contains(key, "_"+keyword) {
+		level = "low"
+		return true
+	} else if strings.Contains(key, keyword+"_") {
+		level = "low"
+		return true
+	} else if strings.Contains(key, keyword) {
 		level = "low"
 		return true
 	}
@@ -250,7 +271,7 @@ func getRootKey(rootKeyName string) (registry.Key, error) {
 	}
 }
 
-func DeleteRegistry(input string) {
+func DeleteRegistry(input string) string {
 
 	firstBackslashIndex := strings.Index(input, "\\")
 	if firstBackslashIndex != -1 {
@@ -274,22 +295,23 @@ func DeleteRegistry(input string) {
 	key, err := registry.OpenKey(hive, regPath, registry.WRITE)
 	paths := strings.Split(input, "::")
 	if err != nil {
-		Error <- fmt.Sprintf("Error opening registry key: %s"+"\n"+
-			"path: %s", err, paths[0])
+		//Error <- fmt.Sprintf("Error opening registry key: %s"+"\n"+
+		//	"path: %s", err, paths[0])
 		fmt.Println("Error opening registry key:", err)
-		return
+		return fmt.Sprintf("Error opening registry key: %s"+"\n"+
+			"path: %s", err, paths[0])
 	}
 	defer key.Close()
 
-	// 删除默认值
+	// 删除
 	err = key.DeleteValue(parts[1]) // 空字符串表示默认值
 	if err != nil {
-		Error <- fmt.Sprintf("Error deleting registry value: %s"+"\n"+
-			"path:%s", err, paths[0])
+		//Error <- fmt.Sprintf("Error deleting registry value: %s"+"\n"+
+		//	"path:%s", err, paths[0])
 		fmt.Println("Error deleting registry value:", err)
-		return
+		return fmt.Sprintf("Error deleting registry value: %s"+"\n"+
+			"path:%s", err, paths[0])
 	}
-
 	fmt.Println("Default value deleted successfully.")
-
+	return "success"
 }

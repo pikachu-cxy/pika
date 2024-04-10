@@ -3,6 +3,7 @@ import {DeleteRegistry, SearchRegistry} from "../../wailsjs/go/main/App";
 import {EventsOn} from "../../wailsjs/runtime";
 import {computed, h, nextTick, onMounted, reactive, ref} from 'vue';
 import {NTag, useDialog, useMessage} from "naive-ui";
+import {da} from "date-fns/locale";
 
 const softwareName = ref('')
 const data = ref([]);
@@ -14,6 +15,22 @@ const percentage = ref(0)
 //   {id:3,tags:["high"],key:"moba",path:"/13/123"},
 //   {id:4,tags:["low"],key:"xshell",path:"/13/123"},
 // ])
+//generateDirtyData(1000)
+function generateDirtyData(count) {
+  const tags = ["low", "medium", "high"]; // 预定义的标签数组
+  const keys = ["moba", "xmanager", "xshell"]; // 预定义的键数组
+  const path = "/13/123"; // 固定的路径
+  for (let i = 0; i < count; i++) {
+    const randomTags = tags[Math.floor(Math.random() * tags.length)]; // 随机选择一个标签
+    const randomKey = keys[Math.floor(Math.random() * keys.length)]; // 随机选择一个键
+    data.value.push({
+      id: i, // 使用循环索引作为id
+      tags: [randomTags], // 将随机标签放入数组
+      key: randomKey, // 使用随机键
+      path: path // 使用固定的路径
+    });
+  }
+}
 
 const input = ref('');
 //const selectedRows = ref([]);
@@ -101,8 +118,13 @@ const columns = ref([
     key: 'path',
     resizable: true,
     sorter: 'default'
-  }
+  },
 ])
+
+const play = (row)=> {
+  message.info(`Play ${row.title}`);
+}
+
 
 const options = [
   // {
@@ -125,18 +147,62 @@ const y=  yRef;
 //const selectedRowIndex = ref(-1);
 
 const dialog = useDialog()
-let sure = false
-const handleConfirm = () => {
+// let sure = false
+// const handleConfirm = () => {
+//   dialog.warning({
+//     title: "警告",
+//     content: "确定删除？",
+//     positiveText: "确定",
+//     negativeText: "不确定",
+//     onPositiveClick: () => {
+//       sure = true
+//     },
+//     onNegativeClick: () => {
+//       sure = false
+//     }
+//   });
+// }
+
+const deleteNumber = ref(0)
+
+const deleteSelect = ()=>{
+  if(data.value.length===0){
+    message.info("无可删除项！")
+    return
+  }
+  if(selectedRowsRef.value.length===0){
+    message.info("请先选中行！")
+    return;
+  }
+  showDropdownRef.value = false;
   dialog.warning({
     title: "警告",
     content: "确定删除？",
     positiveText: "确定",
     negativeText: "不确定",
-    onPositiveClick: () => {
-      sure = true
+    onPositiveClick: async () => {
+      for (const row of data.value) {
+        if (selectedRowsRef.value.includes(row.id)) {
+          const result = await DeleteRegistry(row.path);
+          if (result === "success") {
+            deleteNumber.value++
+            data.value = data.value.filter(item => item.id !== row.id);
+          } else {
+            dialog.error({
+              title: "删除失败，请手动去注册表删除该项",
+              content: result,
+              positiveText: "确定",
+              onPositiveClick: () => {
+              }
+            })
+            console.log(result);
+          }
+        }
+      }
+      selectedRowsRef.value = [];
     },
     onNegativeClick: () => {
-      sure = false
+
     }
   });
 }
@@ -151,19 +217,26 @@ const handleSelect = (key)=> {
       content: "确定删除？",
       positiveText: "确定",
       negativeText: "不确定",
-      onPositiveClick: () => {
-        data.value.forEach(
-            row => {
-              if (selectedRowsRef.value.includes(row.id)) {
-                // 从数据中移除选中的行
-                const index = data.value.findIndex(item => item.id === row.id);
-                if (index !== -1) {
-                  DeleteRegistry(row.path);
-                  data.value.splice(index, 1);
-                }
-              }
-              });
-        selectedRowsRef.value = []
+      onPositiveClick: async () => {
+        for (const row of data.value) {
+          if (selectedRowsRef.value.includes(row.id)) {
+            const result = await DeleteRegistry(row.path);
+            if (result === "success") {
+              deleteNumber.value++
+              data.value = data.value.filter(item => item.id !== row.id);
+            } else {
+                dialog.error({
+                  title: "删除失败，请手动去注册表删除该项",
+                  content: result,
+                  positiveText: "确定",
+                  onPositiveClick: () => {
+                  }
+                })
+              console.log(result);
+            }
+          }
+        }
+        selectedRowsRef.value = [];
       },
       onNegativeClick: () => {
 
@@ -180,17 +253,18 @@ const  showDropdown = showDropdownRef;
 const message = useMessage()
 
 const initRegistryMap = async() =>{
-  message.info("注册表初始化扫描中请稍后~")
   //每次点击搜索都重置
   data.value = []
   index.value = 1
-  percentage.value = 0.0
+  percentage.value = 0
 
   //message.info("正在扫描注册表，请稍候~");
-  if (input.value.length === 0) {
+  if (input.value.length === 0||input.value===' '||input.value==="\n") {
     //input.value = ""
+    message.info("请按格式输入软件名称！")
     return
   }
+  message.info("注册表初始化扫描中请稍后~")
   await SearchRegistry(input.value)
 
   console.log(data.value)
@@ -218,15 +292,16 @@ EventsOn("percentage", e=>{
   }
 })
 
-EventsOn("DeleteError", e=>{
-  dialog.error({
-    title: "删除失败，请手动去注册表删除该项",
-    content: e,
-    positiveText: "确定",
-    onPositiveClick: () => {
-    }
-  })
-})
+
+// EventsOn("DeleteError", e=>{
+//   dialog.error({
+//     title: "删除失败，请手动去注册表删除该项",
+//     content: e,
+//     positiveText: "确定",
+//     onPositiveClick: () => {
+//     }
+//   })
+// })
 
 
 const handleChange = (event) => {
@@ -285,6 +360,7 @@ const filteredItems = computed(() => {
 
 <template>
   <div class="box">
+    <div class="search">
     <n-input v-model:value="input" type="textarea"
              placeholder="输入软件名称或导入黑名单
 格式:
@@ -301,18 +377,41 @@ wechat"
     </n-button>
     <div class="custom-file-upload">
       <label for="file-upload" class="custom-file-upload-label">
-        <span style="font-family: inherit;">选择文件</span>
+        <span style="font-family: inherit;">导入黑名单</span>
       </label>
       <input type="file" id="file-upload" @change="handleChange">
     </div>
     <n-progress
+        v-if="percentage < 100"
         class="Pro"
         type="circle"
         :percentage=percentage
         :indicator-placement="'inside'"
 
     />
+    </div>
     <n-input v-model:value="softwareName" placeholder="注册表路径过滤搜索"></n-input>
+    <div class="line">
+    <n-row class="row">
+      <n-col :span="12">
+        <n-statistic label="统计数据(已删除/残留项)" :value=deleteNumber>
+          <template #prefix>
+            <n-icon>
+              <md-save />
+            </n-icon>
+          </template>
+          <template #suffix>
+            /{{data.length}}
+          </template>
+        </n-statistic>
+      </n-col>
+    </n-row>
+      <div class="delete">
+      <n-button type="primary" class="button" @click="deleteSelect">
+        删除选中项
+      </n-button>
+      </div>
+    </div>
     <n-data-table
         :pagination="paginationReactive"
         :checked-row-keys = "selectedRowsRef"
@@ -381,7 +480,7 @@ wechat"
   color: #fff;
   padding: 5px 10px;
   border: 1px solid #ccc; /* 灰色边框 */
-  width: 60px;
+  width: 70px;
   height: 25px;
   text-align: center;
   cursor: pointer;
@@ -391,15 +490,19 @@ wechat"
 #file-upload {
   display: none;
 }
-
-.result {
-  height: 20px;
-  line-height: 20px;
-  margin: 1.5rem auto;
+.search{
+  margin-bottom: 10px;
+  display: flex;
 }
-
-.input-box {
+.row{
   text-align: center;
 }
-
+.line{
+  display: flex;
+  .delete{
+    text-align: center;
+    margin-top: 10px;
+    margin-right: 100px;
+  }
+}
 </style>

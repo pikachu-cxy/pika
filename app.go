@@ -35,8 +35,8 @@ func (a *App) startup(ctx context.Context) {
 				runtime.EventsEmit(ctx, "percentage", percentage)
 			case _searcher := <-SearchRegistry.SearchChan:
 				runtime.EventsEmit(ctx, "SearchRegistry", _searcher)
-			case _error := <-SearchRegistry.Error:
-				runtime.EventsEmit(ctx, "DeleteError", _error)
+				//case _error := <-SearchRegistry.Error:
+				//	runtime.EventsEmit(ctx, "DeleteError", _error)
 			}
 		}
 	}()
@@ -69,8 +69,9 @@ func (a *App) SearchRegistry(input string) {
 	SearchRegistry.SearchRegistry(input)
 }
 
-func (a *App) DeleteRegistry(input string) {
-	SearchRegistry.DeleteRegistry(input)
+func (a *App) DeleteRegistry(input string) string {
+	result := SearchRegistry.DeleteRegistry(input)
+	return result
 }
 
 func (a *App) Greet2(name string) []string {
