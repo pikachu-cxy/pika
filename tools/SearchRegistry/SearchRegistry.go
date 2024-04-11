@@ -2,9 +2,10 @@ package SearchRegistry
 
 import (
 	"fmt"
-	"golang.org/x/sys/windows/registry"
 	"strings"
 	"sync"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 type Result struct {
@@ -40,7 +41,7 @@ func SearchRegistry(input string) {
 	}
 	regData := make(map[string]string)
 	// 初始进度为0%
-	Percentage <- "0"
+	Percentage <- "0.1"
 	lastPercentage = 0.0
 	//读取software注册表进行初始化map
 	initRegistryMap("SOFTWARE", regData)
@@ -227,18 +228,6 @@ func keyContains(key string, keyword string) bool {
 		return true
 	} else if strings.Contains(key, "\\"+keyword+".") {
 		level = "medium"
-		return true
-	} else if strings.Contains(key, "."+keyword) {
-		level = "low"
-		return true
-	} else if strings.Contains(key, "."+keyword+".") {
-		level = "low"
-		return true
-	} else if strings.Contains(key, "_"+keyword) {
-		level = "low"
-		return true
-	} else if strings.Contains(key, keyword+"_") {
-		level = "low"
 		return true
 	} else if strings.Contains(key, keyword) {
 		level = "low"
