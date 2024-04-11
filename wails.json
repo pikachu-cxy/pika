@@ -5,8 +5,4 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "http://localhost:3000",
-  "author": {
-    "name": "simple.chen",
-    "email": "2417071941@qq.com"
-  }
 }
