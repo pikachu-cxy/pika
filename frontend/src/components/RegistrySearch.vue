@@ -85,13 +85,23 @@ const columns = ref([
     width: 80,
     render(row) {
       const tagKey = row.tags[0]; // 获取 tags 数组中的第一个元素
+      let type = "info"; // 默认type为info  
+        
+        // 根据tagKey的值设置不同的type  
+        if (tagKey === 'high') {  
+          type = "error"; 
+        } else if (tagKey === 'medium') {  
+          type = "warning";  
+        } else if (tagKey === 'low') {  
+          type = "info";   
+        }  
       return h(
           NTag,
           {
             style: {
               marginRight: "6px"
             },
-            type: "info",
+            type: type,
             bordered: false
           },
           {
@@ -256,18 +266,23 @@ const initRegistryMap = async() =>{
   //每次点击搜索都重置
   data.value = []
   index.value = 1
-  percentage.value = 0
+  percentage.value = 0.0
+  disable.value = true
 
   //message.info("正在扫描注册表，请稍候~");
   if (input.value.length === 0||input.value===' '||input.value==="\n") {
     //input.value = ""
     message.info("请按格式输入软件名称！")
+    disable.value = false
     return
   }
   message.info("注册表初始化扫描中请稍后~")
+  console.log(percentage.value)
+
   await SearchRegistry(input.value)
 
   console.log(data.value)
+  disable.value = false
 }
 
 const index = ref(1)
@@ -284,12 +299,14 @@ EventsOn("SearchRegistry", e => {
       path: e.path
     });
   }
+
 });
 
 EventsOn("percentage", e=>{
   if(percentage.value < 100){
     percentage.value = parseInt(e)
   }
+
 })
 
 
@@ -356,6 +373,8 @@ const filteredItems = computed(() => {
   );
 });
 
+const disable = ref(false)
+
 </script>
 
 <template>
@@ -372,7 +391,7 @@ wechat"
                       maxRows: 20
                     }"
              class="input-l"/>
-    <n-button type="primary" class="button" @click="initRegistryMap">
+    <n-button type="primary" class="button" @click="initRegistryMap" :disabled=disable>
       点击搜索
     </n-button>
     <div class="custom-file-upload">
@@ -390,7 +409,6 @@ wechat"
 
     />
     </div>
-    <n-input v-model:value="softwareName" placeholder="注册表路径过滤搜索"></n-input>
     <div class="line">
     <n-row class="row">
       <n-col :span="12">
@@ -412,6 +430,7 @@ wechat"
       </n-button>
       </div>
     </div>
+    <n-input v-model:value="softwareName" placeholder="注册表路径过滤搜索"></n-input>
     <n-data-table
         :pagination="paginationReactive"
         :checked-row-keys = "selectedRowsRef"
@@ -442,6 +461,7 @@ wechat"
 
 <style scoped>
 .box {
+  height: 100%;
   width: 90vw;
 
   .input-l {
@@ -502,7 +522,7 @@ wechat"
   .delete{
     text-align: center;
     margin-top: 10px;
-    margin-right: 100px;
+    margin-right: 350px;
   }
 }
 </style>
