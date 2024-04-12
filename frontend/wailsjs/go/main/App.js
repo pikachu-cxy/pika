@@ -10,10 +10,6 @@ export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
 
-export function Greet2(arg1) {
-  return window['go']['main']['App']['Greet2'](arg1);
-}
-
 export function SearchRegistry(arg1) {
   return window['go']['main']['App']['SearchRegistry'](arg1);
 }
